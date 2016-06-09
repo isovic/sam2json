@@ -85,6 +85,7 @@ int main(int argc, char* argv[]) {
     exit(1);
   }
 
+  LOG_ALL("Hashing qnames from the reads file.\n");
   SequenceFile seqs_reads(SEQ_FORMAT_AUTO, parameters.reads_path);
   std::map<std::string, int64_t> qname_to_id;
   for (int64_t i=0; i<seqs_reads.get_sequences().size(); i++) {
@@ -93,6 +94,7 @@ int main(int argc, char* argv[]) {
   }
   seqs_reads.Clear();
 
+  LOG_ALL("Reading the SAM file.\n");
   FILE *fp = fopen(parameters.out_path.c_str(), "w");
   SequenceFile seqs_sam(SEQ_FORMAT_AUTO, parameters.aln_path);
   Convert(seqs_sam, qname_to_id, fp);
