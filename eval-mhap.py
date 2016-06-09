@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# Script originally implemented by Robert Vaser (2016), modified by Ivan Sovic (2016).
+
 import os, sys, getopt, re, json
 
 def main():
