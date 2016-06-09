@@ -4,3 +4,7 @@ out/
 temp/
 bin/
 obj*/
+test-data/
+!test-data/reads.fastq
+!test-data/test.sam
+
