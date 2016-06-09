@@ -32,7 +32,7 @@ def main():
             last_path = argument
         elif option in ("-g"):
             graphmap_path = argument
-	elif option in ("-j"):
+    	elif option in ("-j"):
             joint_path = argument
         elif option in ("-h", "-help"):
             help()
@@ -47,31 +47,28 @@ def main():
     if out_path is None:
         error("mising option: -o <out file>")
 
-    if last_path is None:
-        error("missing option: -l <last json file>")
+    if (last_path == None and bwa_path == None and graphmap_path == None and joint_path == None):
+        error("At least one truth file needs to be specified, either '-l <last json file>', '-b<bwa json file>', '-g <graphmap json file>' or '-j <joint json file>'.");
 
-    if not os.path.isfile(last_path):
+    if (last_path != None and not os.path.isfile(last_path)):
         error("non-existent file: -l {}".format(last_path))
 
-    if bwa_path is None:
-        error("missing option: -b <bwa json file>")
-
-    if not os.path.isfile(bwa_path):
+    if (bwa_path != None and not os.path.isfile(bwa_path)):
         error("non-existent file: -b {}".format(bwa_path))
 
-    if graphmap_path is None:
-        error("missing option: -g <graphmap json file>")
-
-    if not os.path.isfile(graphmap_path):
+    if (graphmap_path != None and not os.path.isfile(graphmap_path)):
         error("non-existent file: -g {}".format(graphmap_path))
 
-    last_dict = loadDictionary(last_path)
-    bwa_dict = loadDictionary(bwa_path)
-    graphmap_dict = loadDictionary(graphmap_path)
-    joint_dict = loadDictionary(joint_path)
+    if (joint_path != None and not os.path.isfile(joint_path)):
+        error("non-existent file: -j {}".format(joint_path))
+
+    last_dict = loadDictionary(last_path) if (last_path != None) else None;
+    bwa_dict = loadDictionary(bwa_path) if (bwa_path != None) else None;
+    graphmap_dict = loadDictionary(graphmap_path) if (graphmap_path != None) else None;
+    joint_dict = loadDictionary(joint_path) if (joint_path != None) else None;
 
     overlaps = parseMhapFile(in_path)
-    labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, out_path)
+    labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path)
 
 def loadDictionary(file_path):
     dictionary = None
@@ -79,15 +76,17 @@ def loadDictionary(file_path):
         dictionary = json.load(file)
     return dictionary
 
-def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, out_path):
+def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path):
 
     last_t = 0
     bwa_t = 0
     graphmap_t = 0
+    joint_t = 0;
     total_t = 0
     last_f = 0
     bwa_f = 0
     graphmap_f = 0
+    joint_f = 0;
     total_f = 0
 
     faulty_overlaps = []
@@ -95,21 +94,27 @@ def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, out_path):
 
     for overlap in overlaps:
         true = 0
-        if (overlap[0] in last_dict and int(overlap[1]) in last_dict[overlap[0]]) or (overlap[1] in last_dict and int(overlap[0]) in last_dict[overlap[1]]):
+        if (last_dict != None and ((overlap[0] in last_dict and int(overlap[1]) in last_dict[overlap[0]]) or (overlap[1] in last_dict and int(overlap[0]) in last_dict[overlap[1]]))):
             last_t += 1
             true = 1
         else:
             last_f += 1
-        if (overlap[0] in bwa_dict and int(overlap[1]) in bwa_dict[overlap[0]]) or (overlap[1] in bwa_dict and int(overlap[0]) in bwa_dict[overlap[1]]):
+        if (bwa_dict != None and ((overlap[0] in bwa_dict and int(overlap[1]) in bwa_dict[overlap[0]]) or (overlap[1] in bwa_dict and int(overlap[0]) in bwa_dict[overlap[1]]))):
             bwa_t += 1
             true = 1   
         else:
             bwa_f += 1
-        if (overlap[0] in graphmap_dict and int(overlap[1]) in graphmap_dict[overlap[0]]) or (overlap[1] in graphmap_dict and int(overlap[0]) in graphmap_dict[overlap[1]]):
+        if (graphmap_dict != None and ((overlap[0] in graphmap_dict and int(overlap[1]) in graphmap_dict[overlap[0]]) or (overlap[1] in graphmap_dict and int(overlap[0]) in graphmap_dict[overlap[1]]))):
             graphmap_t += 1
             true = 1
         else:
             graphmap_f += 1
+        if (joint_dict != None and ((overlap[0] in joint_dict and int(overlap[1]) in joint_dict[overlap[0]]) or (overlap[1] in joint_dict and int(overlap[0]) in joint_dict[overlap[1]]))):
+            joint_t += 1
+            true = 1
+        else:
+            joint_f += 1            
+
         if true == 1:
             total_t += 1
             correct_overlaps.append(overlap[3])
@@ -117,9 +122,15 @@ def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, out_path):
             total_f += 1
             faulty_overlaps.append(overlap[3])
 
-    print("Last (T,F,Prec(%%),Rec(%%): %d, %d, %f, %f" % (last_t, last_f, float(last_t) / (last_t + last_f), last_t / float(last_dict["total"])))
-    print("Bwa (T,F,Prec(%%),Rec(%%)): %d, %d, %f, %f" % (bwa_t, bwa_f, float(bwa_t) / (bwa_t + bwa_f), bwa_t / float(bwa_dict["total"])))
-    print("Graphmap (T,F,Prec(%%),Rec(%%)): %d, %d, %f, %f" % (graphmap_t, graphmap_f, float(graphmap_t) / (graphmap_t + graphmap_f), graphmap_t / float(graphmap_dict["total"])))
+    if (last_dict != None):
+        print("Last (T,F,Prec(%%),Rec(%%): %d, %d, %f, %f" % (last_t, last_f, float(last_t) / (last_t + last_f), last_t / float(last_dict["total"])))
+    if (bwa_dict != None):
+        print("Bwa (T,F,Prec(%%),Rec(%%)): %d, %d, %f, %f" % (bwa_t, bwa_f, float(bwa_t) / (bwa_t + bwa_f), bwa_t / float(bwa_dict["total"])))
+    if (graphmap_dict != None):
+        print("Graphmap (T,F,Prec(%%),Rec(%%)): %d, %d, %f, %f" % (graphmap_t, graphmap_f, float(graphmap_t) / (graphmap_t + graphmap_f), graphmap_t / float(graphmap_dict["total"])))
+    if (joint_dict != None):
+        print("Joint (T,F,Prec(%%),Rec(%%)): %d, %d, %f, %f" % (joint_t, joint_f, float(joint_t) / (joint_t + joint_f), joint_t / float(joint_dict["total"])))
+
     print("Total (T,F): %d, %d" % (total_t, total_f))
 
     with open(out_path + "_true.mhap", "w") as file:
