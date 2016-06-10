@@ -79,6 +79,9 @@ def loadDictionary(file_path):
     return dictionary
 
 def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path):
+    if (len(overlaps) == 0):
+        print ("ERROR: Input file contains *no* overlaps!");
+        return None;
 
     last_t = 0
     bwa_t = 0
@@ -151,6 +154,7 @@ def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_
                 total_f += 1
                 faulty_overlaps.append(overlap[3])
 
+    print ("Out path: %s" % (out_path));
     if (last_dict != None):
         print("Last (T,F,Prec(%%),Rec(%%),Unknown(#): %d, %d, %f, %f, %d" % (last_t, last_f, float(last_t) / (last_t + last_f), last_t / float(last_dict["total"]), last_unknown))
     if (bwa_dict != None):
