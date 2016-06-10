@@ -90,9 +90,15 @@ def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_
     graphmap_f = 0
     joint_f = 0;
     total_f = 0
+    last_unknown = 0;
+    bwa_unknown = 0;
+    graphmap_unknown = 0;
+    joint_unknown = 0;
+    total_unknown = 0;
 
     faulty_overlaps = []
     correct_overlaps = []
+    unknown_overlaps = [];
 
     for overlap in overlaps:
         true = 0
@@ -100,46 +106,70 @@ def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_
             last_t += 1
             true = 1
         else:
-            last_f += 1
+            if (last_dict != None and ((int(overlap[0]) in last_dict["unmapped"]) or (int(overlap[1]) in last_dict["unmapped"]))):
+                last_unknown += 1;
+            else:
+                last_f += 1
         if (bwa_dict != None and ((overlap[0] in bwa_dict and int(overlap[1]) in bwa_dict[overlap[0]]) or (overlap[1] in bwa_dict and int(overlap[0]) in bwa_dict[overlap[1]]))):
             bwa_t += 1
             true = 1   
         else:
-            bwa_f += 1
+            if (bwa_dict != None and ((int(overlap[0]) in bwa_dict["unmapped"]) or (int(overlap[1]) in bwa_dict["unmapped"]))):
+                bwa_unknown += 1;
+            else:
+                bwa_f += 1
+
         if (graphmap_dict != None and ((overlap[0] in graphmap_dict and int(overlap[1]) in graphmap_dict[overlap[0]]) or (overlap[1] in graphmap_dict and int(overlap[0]) in graphmap_dict[overlap[1]]))):
             graphmap_t += 1
             true = 1
         else:
-            graphmap_f += 1
+            if (graphmap_dict != None and ((int(overlap[0]) in graphmap_dict["unmapped"]) or (int(overlap[1]) in graphmap_dict["unmapped"]))):
+                graphmap_unknown += 1;
+            else:
+                graphmap_f += 1
+
         if (joint_dict != None and ((overlap[0] in joint_dict and int(overlap[1]) in joint_dict[overlap[0]]) or (overlap[1] in joint_dict and int(overlap[0]) in joint_dict[overlap[1]]))):
             joint_t += 1
             true = 1
         else:
-            joint_f += 1            
+            if (joint_dict != None and ((int(overlap[0]) in joint_dict["unmapped"]) or (int(overlap[1]) in joint_dict["unmapped"]))):
+                joint_unknown += 1;
+            else:
+                joint_f += 1            
 
         if true == 1:
             total_t += 1
             correct_overlaps.append(overlap[3])
         else:
-            total_f += 1
-            faulty_overlaps.append(overlap[3])
+            if ((last_dict != None and ((int(overlap[0]) in last_dict["unmapped"]) or (int(overlap[1]) in last_dict["unmapped"]))) or
+                (bwa_dict != None and ((int(overlap[0]) in bwa_dict["unmapped"]) or (int(overlap[1]) in bwa_dict["unmapped"]))) or
+                (graphmap_dict != None and ((int(overlap[0]) in graphmap_dict["unmapped"]) or (int(overlap[1]) in graphmap_dict["unmapped"]))) or
+                (joint_dict != None and ((int(overlap[0]) in joint_dict["unmapped"]) or (int(overlap[1]) in joint_dict["unmapped"])))):
+                total_unknown += 1;
+                unknown_overlaps.append(overlap[3]);
+            else:
+                total_f += 1
+                faulty_overlaps.append(overlap[3])
 
     if (last_dict != None):
-        print("Last (T,F,Prec(%%),Rec(%%): %d, %d, %f, %f" % (last_t, last_f, float(last_t) / (last_t + last_f), last_t / float(last_dict["total"])))
+        print("Last (T,F,Prec(%%),Rec(%%),Unknown(#): %d, %d, %f, %f, %d" % (last_t, last_f, float(last_t) / (last_t + last_f), last_t / float(last_dict["total"]), last_unknown))
     if (bwa_dict != None):
-        print("Bwa (T,F,Prec(%%),Rec(%%)): %d, %d, %f, %f" % (bwa_t, bwa_f, float(bwa_t) / (bwa_t + bwa_f), bwa_t / float(bwa_dict["total"])))
+        print("Bwa (T,F,Prec(%%),Rec(%%)),Unknown(#): %d, %d, %f, %f, %d" % (bwa_t, bwa_f, float(bwa_t) / (bwa_t + bwa_f), bwa_t / float(bwa_dict["total"]), bwa_unknown))
     if (graphmap_dict != None):
-        print("Graphmap (T,F,Prec(%%),Rec(%%)): %d, %d, %f, %f" % (graphmap_t, graphmap_f, float(graphmap_t) / (graphmap_t + graphmap_f), graphmap_t / float(graphmap_dict["total"])))
+        print("Graphmap (T,F,Prec(%%),Rec(%%),Unknown(#)): %d, %d, %f, %f, %d" % (graphmap_t, graphmap_f, float(graphmap_t) / (graphmap_t + graphmap_f), graphmap_t / float(graphmap_dict["total"]), graphmap_unknown))
     if (joint_dict != None):
-        print("Joint (T,F,Prec(%%),Rec(%%)): %d, %d, %f, %f" % (joint_t, joint_f, float(joint_t) / (joint_t + joint_f), joint_t / float(joint_dict["total"])))
+        print("Joint (T,F,Prec(%%),Rec(%%),Unknown(#)): %d, %d, %f, %f, %d" % (joint_t, joint_f, float(joint_t) / (joint_t + joint_f), joint_t / float(joint_dict["total"]), joint_unknown))
 
-    print("Total (T,F): %d, %d" % (total_t, total_f))
+    print("Total (T,F,Unknown): %d, %d, %d" % (total_t, total_f, total_unknown))
 
     with open(out_path + "_true.mhap", "w") as file:
         for overlap in correct_overlaps:
             file.write(overlap + '\n')
     with open(out_path + "_false.mhap", "w") as file:
         for overlap in faulty_overlaps:
+            file.write(overlap + '\n')
+    with open(out_path + "_unknown.mhap", "w") as file:
+        for overlap in unknown_overlaps:
             file.write(overlap + '\n')
 
 def parseMhapFile(file_path):

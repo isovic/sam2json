@@ -18,12 +18,16 @@
 typedef Interval<int64_t> IntervalType;
 typedef IntervalTree<int64_t> IntervalTreeOverlaps;
 
-int GroupAlignmentsToContigs(const SequenceFile &alns, std::vector<std::string> &ctg_names, std::map<std::string, std::vector<const SingleSequence *> > &ctg_alns) {
+int GroupAlignmentsToContigs(const SequenceFile &alns, std::vector<std::string> &ctg_names, std::map<std::string, std::vector<const SingleSequence *> > &ctg_alns, std::vector<const SingleSequence *> &unmapped) {
   ctg_names.clear();
   ctg_alns.clear();
+  unmapped.clear();
 
   for (int64_t i=0; i<alns.get_sequences().size(); i++) {
-    if (alns.get_sequences()[i]->get_aln().IsMapped() == false) continue;
+    if (alns.get_sequences()[i]->get_aln().IsMapped() == false) {
+      unmapped.push_back(alns.get_sequences()[i]);
+      continue;
+    }
 
     auto it = ctg_alns.find(alns.get_sequences()[i]->get_aln().get_rname());
     if (it != ctg_alns.end()) {
@@ -42,10 +46,12 @@ void Convert(const SequenceFile &seqs_sam, const std::map<std::string, int64_t> 
 
   std::vector<std::string> ctg_names;
   std::map<std::string, std::vector<const SingleSequence *> > all_ctg_alns;
-  GroupAlignmentsToContigs(seqs_sam, ctg_names, all_ctg_alns);
+  std::vector<const SingleSequence *> unmapped_alns;
+  GroupAlignmentsToContigs(seqs_sam, ctg_names, all_ctg_alns, unmapped_alns);
 
   int64_t num_seqs = 0;
   int64_t total = 0;
+  int64_t unmapped = 0;
   fprintf (fp_out, "{");
 
   for (int64_t i=0; i<all_ctg_alns.size(); i++) {
@@ -117,6 +123,16 @@ void Convert(const SequenceFile &seqs_sam, const std::map<std::string, int64_t> 
     LOG_ALL("Finished generating overlaps.\n");
     LOG_NEWLINE;
   }
+
+  fprintf (fp_out, ", \"unmapped\": [");
+  for (int64_t i=0; i<unmapped_alns.size(); i++) {
+    if (i > 0) {
+      fprintf (fp_out, ", ");
+    }
+    std::string header = unmapped_alns[i]->get_header();
+    fprintf (fp_out, "%ld", (qname_to_id.find(header)->second + 1));
+  }
+  fprintf (fp_out, "]");
 
   // Do not count edges twice, as well as self overlaps.
   fprintf (fp_out, ", \"total\": %ld}", (total/2 - num_seqs));
