@@ -6,7 +6,7 @@ import os, sys, getopt, re, json
 
 def main():
 
-    options = "i:o:b:l:g:j:h"
+    options = "i:o:b:l:g:a:h"
     long_options = ["help"]
 
     in_path = None
@@ -278,6 +278,9 @@ def help():
     "    -g  <graphmap json file>\n"
     "        (required)\n"
     "        file containing alignments dictionary of GraphMap in JSON format\n"
+    "    -a  <out_csv_file>\n"
+    "        (optional)\n"
+    "        file in which results will be appended (not overwritten) in a tab-separated format\n"
     "    -h, --help\n"
     "        prints out the help")
 
