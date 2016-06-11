@@ -3,6 +3,7 @@
 .settings/
 out/
 temp/
+temp*/
 bin/
 obj*/
 test-data/

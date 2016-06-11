@@ -94,14 +94,28 @@ def get_headers_and_lengths(fastq_path):
 	fp_in.close();
 	return [headers, lengths];
 
-
-
 def convert_line(qname_hash, m4_line):
 	sl = m4_line.split();
-	qname = '/'.join(sl[0].split('/')[0:-1]);
-#	tname = '/'.join(sl[1].split('/')[0:-1]);	
+	qname = sl[0].split('/')[0];
 	tname = sl[1];
-	mhap_line = ' '.join([str(qname_hash[qname]), str(qname_hash[tname])] + sl[2:-1]);
+	try:   
+	        id1 = str(qname_hash[qname]);
+	except Exception, e:
+	        sys.stderr.write('(id1) Qname %s not found!' % (qname));
+	        sys.stderr.write(str(e));
+	        sys.stderr.write('Line:\n%s\n' % (m4_line));
+	        sys.stderr.write(str(sl));
+	        exit(1);
+	try:
+	        id2 = str(qname_hash[tname]);
+	except Exception, e:
+	        sys.stderr.write('(id2) Tname %s not found!' % (tname));
+	        sys.stderr.write(str(e));
+	        sys.stderr.write('Line:\n%s\n' % (m4_line));
+	        sys.stderr.write(str(sl));
+	        exit(1);
+
+	mhap_line = ' '.join([id1, id2] + sl[2:-1]);
 	return mhap_line;
 
 def convert(in_reads, in_m4):
@@ -110,6 +124,7 @@ def convert(in_reads, in_m4):
 	for i in xrange(0, len(headers)):
 		qname_hash[headers[i]] = (i + 1);
 		qname_hash[headers[i].split()[0]] = (i + 1);
+		qname_hash[headers[i].split('/')[0]] = (i + 1);
 
 	try:
 		fp = open(in_m4, 'r');
