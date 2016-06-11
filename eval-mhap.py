@@ -76,7 +76,8 @@ def main():
     joint_dict = merge_dicts([last_dict, bwa_dict, graphmap_dict]);
 
     overlaps = parseMhapFile(in_path)
-    labelOverlaps(in_path, overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path, csv_path)
+    # labelOverlaps(in_path, overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path, csv_path)
+    labelOverlaps(in_path, overlaps, None, None, None, joint_dict, out_path, csv_path)
 
 def loadDictionary(file_path):
     dictionary = None
