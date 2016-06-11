@@ -77,7 +77,8 @@ def main():
 
     overlaps = parseMhapFile(in_path)
     # labelOverlaps(in_path, overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path, csv_path)
-    labelOverlaps(in_path, overlaps, None, None, None, joint_dict, out_path, csv_path)
+    # labelOverlaps(in_path, overlaps, None, None, None, joint_dict, out_path, csv_path)
+    labelOverlaps2(in_path, overlaps, joint_dict, out_path, csv_path)
 
 def loadDictionary(file_path):
     dictionary = None
@@ -110,6 +111,80 @@ def merge_dicts(dict_list):
     sys.stderr.write('Finished merging.\n');
 
     return overlap_union;
+
+def labelOverlaps2(in_path, overlaps, joint_dict, out_path, csv_path):
+    if (len(overlaps) == 0):
+        print ("ERROR: Input file contains *no* overlaps!");
+        return None;
+
+    joint_t = 0;
+    total_t = 0
+    joint_f = 0;
+    total_f = 0
+    joint_unknown = 0;
+    total_unknown = 0;
+
+    faulty_overlaps = []
+    correct_overlaps = []
+    unknown_overlaps = [];
+
+    checked_overlaps = {};
+
+    for overlap in overlaps:
+        overlap_tuple = (overlap[0], overlap[1]) if (overlap[0] < overlap[1]) else (overlap[1], overlap[0]);
+        if (overlap_tuple in checked_overlaps): continue;
+
+        true = 0
+        if (joint_dict != None and ((overlap[0] in joint_dict and int(overlap[1]) in joint_dict[overlap[0]]) or (overlap[1] in joint_dict and int(overlap[0]) in joint_dict[overlap[1]]))):
+            joint_t += 1
+            true = 1
+        else:
+            if (joint_dict != None and ((int(overlap[0]) in joint_dict["unmapped"]) or (int(overlap[1]) in joint_dict["unmapped"]))):
+                joint_unknown += 1;
+            else:
+                joint_f += 1            
+
+        if true == 1:
+            total_t += 1
+            correct_overlaps.append(overlap[3])
+        else:
+            if ((joint_dict != None and ((int(overlap[0]) in joint_dict["unmapped"]) or (int(overlap[1]) in joint_dict["unmapped"])))):
+                total_unknown += 1;
+                unknown_overlaps.append(overlap[3]);
+            else:
+                total_f += 1
+                faulty_overlaps.append(overlap[3])
+
+        checked_overlaps[overlap_tuple] = 1;
+
+    print ("Out path: %s" % (out_path));
+    if (joint_dict != None):
+        precision = float(joint_t) / (joint_t + joint_f);
+        recall = joint_t / float(joint_dict["total"]);
+        F1 = (2 * precision * recall) / (precision + recall);
+        print("Joint (T,F,Unknown(#),Prec(%%),Rec(%%),F1(%%)): %d, %d, %d, %.2f, %.2f, %.2f" % (joint_t, joint_f, joint_unknown, precision*100.0, recall*100.0, F1*100.0))
+
+#     print("Total (T,F,Unknown): %d, %d, %d" % (total_t, total_f, total_unknown))
+
+    with open(out_path + "_true.mhap", "w") as file:
+        for overlap in correct_overlaps:
+            file.write(overlap + '\n')
+    with open(out_path + "_false.mhap", "w") as file:
+        for overlap in faulty_overlaps:
+            file.write(overlap + '\n')
+    with open(out_path + "_unknown.mhap", "w") as file:
+        for overlap in unknown_overlaps:
+            file.write(overlap + '\n')
+
+    if (joint_dict != None):
+        if (csv_path == None):
+            csv_path = out_path + '.csv';
+        fp = open(csv_path, 'a');
+        # fp.write('Overlaps\tTP\tFP\tUnknown\tPrecision\tRecall\tF1\n');
+        fp.write('%s\t%d\t%d\t%d\t%f\t%f\t%f\t# Overlaps\tTP\tFP\tUnknown\tPrecision\tRecall\tF1\n' % (in_path, joint_t, joint_f, joint_unknown, precision*100.0, recall*100.0, F1*100.0));
+        fp.close();
+
+
 
 def labelOverlaps(in_path, overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path, csv_path):
     if (len(overlaps) == 0):
