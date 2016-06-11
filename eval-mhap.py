@@ -225,8 +225,8 @@ def labelOverlaps(in_path, overlaps, last_dict, bwa_dict, graphmap_dict, joint_d
         if (csv_path == None):
             csv_path = out_path + '.csv';
         fp = open(csv_path, 'a');
-        fp.write('Overlaps\tTP\tFP\tUnknown\tPrecision\tRecall\tF1\n');
-        fp.write('%s\t%d\t%d\t%d\t%f\t%f\t%f\n' % (in_path, joint_t, joint_f, joint_unknown, precision*100.0, recall*100.0, F1*100.0));
+        # fp.write('Overlaps\tTP\tFP\tUnknown\tPrecision\tRecall\tF1\n');
+        fp.write('%s\t%d\t%d\t%d\t%f\t%f\t%f\t# Overlaps\tTP\tFP\tUnknown\tPrecision\tRecall\tF1\n' % (in_path, joint_t, joint_f, joint_unknown, precision*100.0, recall*100.0, F1*100.0));
         fp.close();
 
 def parseMhapFile(file_path):
