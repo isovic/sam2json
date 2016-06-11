@@ -15,6 +15,7 @@ def main():
     last_path = None
     graphmap_path = None
     joint_path = None
+    csv_path = None;
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], options, long_options)
@@ -34,8 +35,10 @@ def main():
             last_path = argument
         elif option in ("-g"):
             graphmap_path = argument
-    	elif option in ("-j"):
-            joint_path = argument
+        elif option in ("-a"):
+            csv_path = argument        
+    	# elif option in ("-j"):
+     #        joint_path = argument
         elif option in ("-h", "-help"):
             help()
             sys.exit()
@@ -50,7 +53,8 @@ def main():
         error("mising option: -o <out file>")
 
     if (last_path == None and bwa_path == None and graphmap_path == None and joint_path == None):
-        error("At least one truth file needs to be specified, either '-l <last json file>', '-b<bwa json file>', '-g <graphmap json file>' or '-j <joint json file>'.");
+        # error("At least one truth file needs to be specified, either '-l <last json file>', '-b<bwa json file>', '-g <graphmap json file>' or '-j <joint json file>'.");
+        error("At least one truth file needs to be specified, either '-l <last json file>', '-b<bwa json file>' or '-g <graphmap json file>'.");
 
     if (last_path != None and not os.path.isfile(last_path)):
         error("non-existent file: -l {}".format(last_path))
@@ -61,16 +65,18 @@ def main():
     if (graphmap_path != None and not os.path.isfile(graphmap_path)):
         error("non-existent file: -g {}".format(graphmap_path))
 
-    if (joint_path != None and not os.path.isfile(joint_path)):
-        error("non-existent file: -j {}".format(joint_path))
+    # if (joint_path != None and not os.path.isfile(joint_path)):
+    #     error("non-existent file: -j {}".format(joint_path))
 
     last_dict = loadDictionary(last_path) if (last_path != None) else None;
     bwa_dict = loadDictionary(bwa_path) if (bwa_path != None) else None;
     graphmap_dict = loadDictionary(graphmap_path) if (graphmap_path != None) else None;
-    joint_dict = loadDictionary(joint_path) if (joint_path != None) else None;
+#    joint_dict = loadDictionary(joint_path) if (joint_path != None) else None;
+
+    joint_dict = merge_dicts([last_dict, bwa_dict, graphmap_dict]);
 
     overlaps = parseMhapFile(in_path)
-    labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path)
+    labelOverlaps(in_path, overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path, csv_path)
 
 def loadDictionary(file_path):
     dictionary = None
@@ -78,7 +84,33 @@ def loadDictionary(file_path):
         dictionary = json.load(file)
     return dictionary
 
-def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path):
+def merge_dicts(dict_list):
+    sys.stderr.write('Merging truth overlaps.\n');
+    overlap_union = {};
+    for overlap_dict in dict_list:
+        if (overlap_dict == None): continue;
+        for key in overlap_dict:
+            if (key == 'total'): continue;
+            if (not key in overlap_union):
+                overlap_union[key] = [];
+            overlap_union[key] += overlap_dict[key];
+
+    if (overlap_union == {}): return None;
+
+    total = 0;
+    for key in overlap_union:
+        if (key == 'total'):
+            pass;
+        else:
+            overlap_union[key] = list(set(overlap_union[key]));
+            total += len(overlap_union[key]);
+    overlap_union['total'] = total/2 - len(overlap_union.keys());
+
+    sys.stderr.write('Finished merging.\n');
+
+    return overlap_union;
+
+def labelOverlaps(in_path, overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_path, csv_path):
     if (len(overlaps) == 0):
         print ("ERROR: Input file contains *no* overlaps!");
         return None;
@@ -156,15 +188,27 @@ def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_
 
     print ("Out path: %s" % (out_path));
     if (last_dict != None):
-        print("Last (T,F,Prec(%%),Rec(%%),Unknown(#): %d, %d, %f, %f, %d" % (last_t, last_f, float(last_t) / (last_t + last_f), last_t / float(last_dict["total"]), last_unknown))
+        precision = float(last_t) / (last_t + last_f);
+        recall = last_t / float(last_dict["total"]);
+        F1 = (2 * precision * recall) / (precision + recall);
+        print("Last (T,F,Unknown(#),Prec(%%),Rec(%%),F1(%%)): %d, %d, %d, %.2f, %.2f, %.2f" % (last_t, last_f, last_unknown, precision*100.0, recall*100.0, F1*100.0))
     if (bwa_dict != None):
-        print("Bwa (T,F,Prec(%%),Rec(%%)),Unknown(#): %d, %d, %f, %f, %d" % (bwa_t, bwa_f, float(bwa_t) / (bwa_t + bwa_f), bwa_t / float(bwa_dict["total"]), bwa_unknown))
+        precision = float(bwa_t) / (bwa_t + bwa_f);
+        recall = bwa_t / float(bwa_dict["total"]);
+        F1 = (2 * precision * recall) / (precision + recall);
+        print("Bwa (T,F,Unknown(#),Prec(%%),Rec(%%),F1(%%)): %d, %d, %d, %.2f, %.2f, %.2f" % (bwa_t, bwa_f, bwa_unknown, precision*100.0, recall*100.0, F1*100.0))
     if (graphmap_dict != None):
-        print("Graphmap (T,F,Prec(%%),Rec(%%),Unknown(#)): %d, %d, %f, %f, %d" % (graphmap_t, graphmap_f, float(graphmap_t) / (graphmap_t + graphmap_f), graphmap_t / float(graphmap_dict["total"]), graphmap_unknown))
+        precision = float(graphmap_t) / (graphmap_t + graphmap_f);
+        recall = graphmap_t / float(graphmap_dict["total"]);
+        F1 = (2 * precision * recall) / (precision + recall);
+        print("Graphmap (T,F,Unknown(#),Prec(%%),Rec(%%),F1(%%)): %d, %d, %d, %.2f, %.2f, %.2f" % (graphmap_t, graphmap_f, graphmap_unknown, precision*100.0, recall*100.0, F1*100.0))
     if (joint_dict != None):
-        print("Joint (T,F,Prec(%%),Rec(%%),Unknown(#)): %d, %d, %f, %f, %d" % (joint_t, joint_f, float(joint_t) / (joint_t + joint_f), joint_t / float(joint_dict["total"]), joint_unknown))
+        precision = float(joint_t) / (joint_t + joint_f);
+        recall = joint_t / float(joint_dict["total"]);
+        F1 = (2 * precision * recall) / (precision + recall);
+        print("Joint (T,F,Unknown(#),Prec(%%),Rec(%%),F1(%%)): %d, %d, %d, %.2f, %.2f, %.2f" % (joint_t, joint_f, joint_unknown, precision*100.0, recall*100.0, F1*100.0))
 
-    print("Total (T,F,Unknown): %d, %d, %d" % (total_t, total_f, total_unknown))
+#     print("Total (T,F,Unknown): %d, %d, %d" % (total_t, total_f, total_unknown))
 
     with open(out_path + "_true.mhap", "w") as file:
         for overlap in correct_overlaps:
@@ -175,6 +219,14 @@ def labelOverlaps(overlaps, last_dict, bwa_dict, graphmap_dict, joint_dict, out_
     with open(out_path + "_unknown.mhap", "w") as file:
         for overlap in unknown_overlaps:
             file.write(overlap + '\n')
+
+    if (joint_dict != None):
+        if (csv_path == None):
+            csv_path = out_path + '.csv';
+        fp = open(csv_path, 'a');
+        fp.write('Overlaps\tTP\tFP\tUnknown\tPrecision\tRecall\tF1\n');
+        fp.write('%s\t%d\t%d\t%d\t%f\t%f\t%f\n' % (in_path, joint_t, joint_f, joint_unknown, precision*100.0, recall*100.0, F1*100.0));
+        fp.close();
 
 def parseMhapFile(file_path):
     input = open(file_path).read().split("\n")
