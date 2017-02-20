@@ -129,10 +129,13 @@ def labelOverlaps2(in_path, overlaps, joint_dict, out_path, csv_path):
     unknown_overlaps = [];
 
     checked_overlaps = {};
+    duplicates = 0;
 
     for overlap in overlaps:
         overlap_tuple = (overlap[0], overlap[1]) if (overlap[0] < overlap[1]) else (overlap[1], overlap[0]);
-        if (overlap_tuple in checked_overlaps): continue;
+        if (overlap_tuple in checked_overlaps):
+            duplicates += 1;
+            continue;
 
         true = 0
         if (joint_dict != None and ((overlap[0] in joint_dict and int(overlap[1]) in joint_dict[overlap[0]]) or (overlap[1] in joint_dict and int(overlap[0]) in joint_dict[overlap[1]]))):
@@ -162,7 +165,7 @@ def labelOverlaps2(in_path, overlaps, joint_dict, out_path, csv_path):
         precision = float(joint_t) / (joint_t + joint_f);
         recall = joint_t / float(joint_dict["total"]);
         F1 = (2 * precision * recall) / (precision + recall);
-        print("Joint (T,F,Unknown(#),Prec(%%),Rec(%%),F1(%%)): %d, %d, %d, %.2f, %.2f, %.2f" % (joint_t, joint_f, joint_unknown, precision*100.0, recall*100.0, F1*100.0))
+        print("Joint (T,F,Unknown,Dup(#),Prec(%%),Rec(%%),F1(%%)): %d, %d, %d, %d, %.2f, %.2f, %.2f" % (joint_t, joint_f, joint_unknown, duplicates, precision*100.0, recall*100.0, F1*100.0))
 
 #     print("Total (T,F,Unknown): %d, %d, %d" % (total_t, total_f, total_unknown))
 
@@ -181,7 +184,7 @@ def labelOverlaps2(in_path, overlaps, joint_dict, out_path, csv_path):
             csv_path = out_path + '.csv';
         fp = open(csv_path, 'a');
         # fp.write('Overlaps\tTP\tFP\tUnknown\tPrecision\tRecall\tF1\n');
-        fp.write('%s\t%d\t%d\t%d\t%f\t%f\t%f\t# Overlaps\tTP\tFP\tUnknown\tPrecision\tRecall\tF1\n' % (in_path, joint_t, joint_f, joint_unknown, precision*100.0, recall*100.0, F1*100.0));
+        fp.write('%s\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t# Overlaps\tTP\tFP\tUnknown\tDuplicate\tPrecision\tRecall\tF1\n' % (in_path, joint_t, joint_f, joint_unknown, duplicates, precision*100.0, recall*100.0, F1*100.0));
         fp.close();
 
 
